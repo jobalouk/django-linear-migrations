@@ -170,6 +170,40 @@ class RebaseMigrationsTests(TestCase):
             + " migration, and try again."
         )
 
+    #def test_support_dependencies_as_tuple(self):
+        (self.migrations_dir / "__init__.py").touch()
+        (self.migrations_dir / "0001_initial.py").write_text(empty_migration)
+        (self.migrations_dir / "0002_author_nicknames.py").write_text(empty_migration)
+        (self.migrations_dir / "0002_longer_titles.py").write_text(
+            dedent(
+                """\
+            from django.db import migrations
+
+            class Migration(migrations.Migration):
+                operations = ()
+                dependencies = ()
+            """
+            )
+        )
+        (self.migrations_dir / "max_migration.txt").write_text(
+            dedent(
+                """\
+            <<<<<<< HEAD
+            0002_author_nicknames
+            =======
+            0002_longer_titles
+            >>>>>>> 123456789 (Increase Book title length)
+            """
+            )
+        )
+
+        with pytest.raises(CommandError) as excinfo:
+            self.call_command("testapp")
+
+        assert not excinfo.value.args[0] == (
+            "Could not find dependencies = [...] in '0002_longer_titles.py'"
+        )
+
     def test_error_for_missing_dependencies(self):
         (self.migrations_dir / "__init__.py").touch()
         (self.migrations_dir / "0001_initial.py").write_text(empty_migration)
@@ -247,9 +281,9 @@ class RebaseMigrationsTests(TestCase):
             from django.db import migrations
 
             class Migration(migrations.Migration):
-                dependencies = [
+                dependencies = (
                     ("otherapp", "0001_initial"),
-                ]
+                )
                 operations = []
             """
             )
@@ -273,6 +307,8 @@ class RebaseMigrationsTests(TestCase):
             "Cannot edit '0002_longer_titles.py' since it has 0 dependencies"
             + " within testapp."
         )
+
+        assert False
 
     def test_error_for_double_dependencies(self):
         (self.migrations_dir / "__init__.py").touch()

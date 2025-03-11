@@ -83,19 +83,25 @@ class Command(BaseCommand):
             )
 
         content = rebased_migration_path.read_text()
+        print("content", content)
+
         split_result = re.split(
-            r"(?<=dependencies = )(\[.*?\])",
+            r"(?<=dependencies = )(\[.*?\]|\(.*\))",
             content,
             maxsplit=1,
             flags=re.DOTALL,
         )
+
+        print("split result", split_result)
+
+        print("split_result len", len(split_result))
+
         if len(split_result) != 3:
             raise CommandError(
                 "Could not find dependencies = [...] in"
                 + f" {rebased_migration_filename!r}"
             )
         before_deps, deps, after_deps = split_result
-
         try:
             dependencies_module = ast.parse(deps)
         except SyntaxError:
